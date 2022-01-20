@@ -6,7 +6,7 @@ import * as fs from 'graceful-fs'
 
 import { version } from '../package.json'
 
-export const tsJestBundle = path.join(__dirname, '..', `ts-jest-${version}.tgz`)
+export const tsJestBundle = path.join(__dirname, '..', `cg-marketing-ts-jest-${version}.tgz`)
 
 interface RunResult extends ExecaReturnValue {
   status: number
