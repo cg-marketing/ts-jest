@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'fs'
+import { readFileSync, mkdirSync } from 'fs'
 import path from 'path'
 
 import type { SyncTransformer, TransformedSource } from '@jest/transform'
@@ -222,60 +222,23 @@ export class TsJestTransformer implements SyncTransformer {
    */
   getCacheKey(fileContent: string, filePath: string, transformOptions: TransformOptionsTsJest): string {
     const configs = this._configsFor(transformOptions)
-
     this._logger.debug({ fileName: filePath, transformOptions }, 'computing cache key for', filePath)
 
     // we do not instrument, ensure it is false all the time
     const { instrument = false } = transformOptions
-    const constructingCacheKeyElements = [
+    const { rootDir } = configs
+
+    return sha1(
       this._transformCfgStr,
-      CACHE_KEY_EL_SEPARATOR,
-      configs.rootDir,
-      CACHE_KEY_EL_SEPARATOR,
+      '\x00',
+      rootDir,
+      '\x00',
       `instrument:${instrument ? 'on' : 'off'}`,
-      CACHE_KEY_EL_SEPARATOR,
+      '\x00',
       fileContent,
-      CACHE_KEY_EL_SEPARATOR,
+      '\x00',
       filePath,
-    ]
-    if (!configs.isolatedModules && this._tsResolvedModulesCachePath) {
-      let resolvedModuleNames: string[]
-      if (this._depGraphs.get(filePath)?.fileContent === fileContent) {
-        this._logger.debug(
-          { fileName: filePath, transformOptions },
-          'getting resolved modules from disk caching or memory caching for',
-          filePath,
-        )
-
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        resolvedModuleNames = this._depGraphs
-          .get(filePath)!
-          .resolvedModuleNames.filter((moduleName) => existsSync(moduleName))
-      } else {
-        this._logger.debug(
-          { fileName: filePath, transformOptions },
-          'getting resolved modules from TypeScript API for',
-          filePath,
-        )
-
-        resolvedModuleNames = this._compiler.getResolvedModules(fileContent, filePath, transformOptions.cacheFS)
-        this._depGraphs.set(filePath, {
-          fileContent,
-          resolvedModuleNames,
-        })
-        writeFileSync(this._tsResolvedModulesCachePath, stringify([...this._depGraphs]))
-      }
-      resolvedModuleNames.forEach((moduleName) => {
-        constructingCacheKeyElements.push(
-          CACHE_KEY_EL_SEPARATOR,
-          moduleName,
-          CACHE_KEY_EL_SEPARATOR,
-          statSync(moduleName).mtimeMs.toString(),
-        )
-      })
-    }
-
-    return sha1(...constructingCacheKeyElements)
+    )
   }
 
   async getCacheKeyAsync(
