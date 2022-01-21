@@ -19,19 +19,11 @@ import type {
   ModuleResolutionHost,
   ModuleResolutionCache,
   ResolvedModuleWithFailedLookupLocations,
-  Diagnostic,
 } from 'typescript'
 
 import type { ConfigSet } from '../config'
 import { LINE_FEED, TS_TSX_REGEX } from '../constants'
-import type {
-  DepGraphInfo,
-  StringMap,
-  TsCompilerInstance,
-  TsJestAstTransformer,
-  TsJestCompileOptions,
-  TTypeScript,
-} from '../types'
+import type { StringMap, TsCompilerInstance, TsJestAstTransformer, TsJestCompileOptions, TTypeScript } from '../types'
 import { rootLogger } from '../utils'
 import { Errors, interpolate } from '../utils/messages'
 
@@ -412,45 +404,5 @@ export class TsCompiler implements TsCompilerInstance {
     }
 
     if (shouldIncrementProjectVersion) this._projectVersion++
-  }
-
-  /**
-   * @internal
-   */
-  private _doTypeChecking(fileName: string, depGraphs: Map<string, DepGraphInfo>, watchMode: boolean): void {
-    if (this.configSet.shouldReportDiagnostics(fileName)) {
-      this._logger.debug({ fileName }, '_doTypeChecking(): computing diagnostics using language service')
-
-      // Get the relevant diagnostics - this is 3x faster than `getPreEmitDiagnostics`.
-      const diagnostics: Diagnostic[] = [
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        ...this._languageService!.getSemanticDiagnostics(fileName),
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        ...this._languageService!.getSyntacticDiagnostics(fileName),
-      ]
-      // will raise or just warn diagnostics depending on config
-      this.configSet.raiseDiagnostics(diagnostics, fileName, this._logger)
-    }
-    if (watchMode) {
-      this._logger.debug({ fileName }, '_doTypeChecking(): starting watch mode computing diagnostics')
-
-      for (const entry of depGraphs.entries()) {
-        const normalizedModuleNames = entry[1].resolvedModuleNames.map((moduleName) => normalize(moduleName))
-        const fileToReTypeCheck = entry[0]
-        if (normalizedModuleNames.includes(fileName) && this.configSet.shouldReportDiagnostics(fileToReTypeCheck)) {
-          this._logger.debug({ fileToReTypeCheck }, '_doTypeChecking(): computing diagnostics using language service')
-
-          this._updateMemoryCache(this._getFileContentFromCache(fileToReTypeCheck), fileToReTypeCheck)
-          const importedModulesDiagnostics = [
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            ...this._languageService!.getSemanticDiagnostics(fileToReTypeCheck),
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            ...this._languageService!.getSyntacticDiagnostics(fileToReTypeCheck),
-          ]
-          // will raise or just warn diagnostics depending on config
-          this.configSet.raiseDiagnostics(importedModulesDiagnostics, fileName, this._logger)
-        }
-      }
-    }
   }
 }
