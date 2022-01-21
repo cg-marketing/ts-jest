@@ -178,7 +178,7 @@ export class TsCompiler implements TsCompilerInstance {
       // Must set memory cache before attempting to compile
       this._updateMemoryCache(fileContent, fileName, currentModuleKind === moduleKind)
       const output: EmitOutput = this._languageService.getEmitOutput(fileName)
-      this._doTypeChecking(fileName, options.depGraphs, options.watchMode)
+      // this._doTypeChecking(fileName, options.depGraphs, options.watchMode)
       if (output.emitSkipped) {
         if (TS_TSX_REGEX.test(fileName)) {
           throw new Error(interpolate(Errors.CannotProcessFile, { file: fileName }))
